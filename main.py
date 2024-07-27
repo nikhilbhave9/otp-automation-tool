@@ -45,17 +45,21 @@ def read_users_from_csv() -> dict:
             users[row['email']] = row['password']
     return users
 
+# Sign-in route
 @app.post("/sign-in", response_class=RedirectResponse)
 async def sign_in(email: str = Form(...), password: str = Form(...)):
     users_db = read_users_from_csv()
     if email not in users_db or users_db[email] != password:
         raise HTTPException(status_code=400, detail="Invalid username or password")
     
+    # Generate OTP and store it temporarily
     otp = generate_otp()
     OTP_STORE[email] = otp
+    # Send OTP email
     send_otp_email(email, otp)
 
-    return RedirectResponse(url=f"/otp/{email}", status_code=status.HTTP_303_SEE_OTHER)
+    # Redirect to OTP input page with email as a query parameter
+    return RedirectResponse(url=f"/otp?email={email}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # ====================
@@ -64,7 +68,9 @@ async def sign_in(email: str = Form(...), password: str = Form(...)):
 
 def send_otp_email(email: str, otp: str):
     sender_email = os.getenv('SENDER_EMAIL')
+    print(sender_email)
     sender_password = os.getenv('SENDER_APP_PASSWORD')
+    print(sender_password)
     message = MIMEMultipart("alternative") # READUP ON THIS
     message["Subject"] = "Your OTP Code"
     message["From"] = sender_email
@@ -81,14 +87,20 @@ def send_otp_email(email: str, otp: str):
 def generate_otp() -> str:
     return str(random.randint(100000, 999999))
 
-
-app.get("/otp/{email}", response_class=HTMLResponse)
+# OTP input page route
+@app.get("/otp", response_class=HTMLResponse)
 async def read_otp(request: Request, email: str):
     return templates.TemplateResponse("otp.html", {"request": request, "email": email})
 
-@app.post("/verify-otp", response_class=HTMLResponse)
+# OTP input page route
+@app.post("/verify-otp", response_class=RedirectResponse)
 async def verify_otp(email: str = Form(...), otp: str = Form(...)):
     if OTP_STORE.get(email) == otp:
-        return HTMLResponse(f"Hello {email}, OTP verified successfully!")
+        print("Redirecting to success page")
+        return RedirectResponse(url="/success", status_code=status.HTTP_303_SEE_OTHER)
     else:
         raise HTTPException(status_code=400, detail="Invalid OTP")
+    
+@app.get("/success", response_class=HTMLResponse)
+async def success(request: Request):
+    return templates.TemplateResponse("success.html", {"request": request})

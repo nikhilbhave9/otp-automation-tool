@@ -3,3 +3,4 @@ uvicorn
 jinja2
 email-validator
 python-dotenv
+requests
