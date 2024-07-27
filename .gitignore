@@ -2,3 +2,7 @@ __pycache__
 env
 users.csv
 .env
+chrome-linux64
+chromedriver-linux64
+geckodriver
+otps.csv
