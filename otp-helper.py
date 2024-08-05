@@ -8,6 +8,11 @@ import requests
 import sys
 from dotenv import load_dotenv
 
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+
 
 load_dotenv()
 
@@ -63,48 +68,90 @@ def get_latest_otp():
 
 def perform_login():
     
+
+    # USE SELENIUM METHOD
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+
+    chrome_binary_path = "/home/nikhilbhave9/chrome-linux64/chrome"
+    chromedriver_path = "/home/nikhilbhave9/chromedriver-linux64/chromedriver"
+
+    chrome_options.binary_location = chrome_binary_path
+    service = Service(chromedriver_path)
+    import ipdb; ipdb.set_trace()
+    with webdriver.Chrome(service=service, options=chrome_options) as driver:
+        import ipdb; ipdb.set_trace()
+        driver.get(f"{BASE_URL}/")
+        # driver.find_element(By.NAME, "email").send_keys(USER_EMAIL)
+        # driver.find_element(By.NAME, "password").send_keys(USER_PASSWORD)
+        # driver.find_element(By.ID, "sign-in-button").click()
+
+        # time.sleep(5)
+
+        # otp = get_latest_otp()
+        # if not otp:
+        #     print("No OTP found. Exiting...")
+        #     return
+        # print(f"OTP: {otp}")
+
+        # driver.find_element(By.NAME, "otp").send_keys(otp)
+        # driver.find_element(By.ID, "verify-otp-button").click()
+
+        # time.sleep(5)
+
+        # print(driver.current_url)
+        # if "dashboard" in driver.current_url:
+        #     print("Sign-in successful.")
+        # else:
+        #     print("Failed to sign in.")
+        #     print("Please verify the OTP manually.")
+        #     print("Exiting...")
+        #     return
+
     # USE API METHOD 
     # (we can alternatively use selenium to simulate the login process)
 
     # Hit the sign-in endpoint with the user credentials
 
-    data = {
-        "email": USER_EMAIL,
-        "password": USER_PASSWORD
-    }
-    response = requests.post(f"{BASE_URL}/sign-in", data=data)
+    # data = {
+    #     "email": USER_EMAIL,
+    #     "password": USER_PASSWORD
+    # }
+    # response = requests.post(f"{BASE_URL}/sign-in", data=data)
 
-    if response.status_code != 200:
-        print("Failed to sign in.")
-        sys.exit(1)
-    else:
-        print("Sign-in successful.")
+    # if response.status_code != 200:
+    #     print("Failed to sign in.")
+    #     sys.exit(1)
+    # else:
+    #     print("Sign-in successful.")
 
-    # Needs some time to receive the OTP email - adding implicit wait for now, can be replaced with explicit/fluent wait
-    time.sleep(5)
+    # # Needs some time to receive the OTP email - adding implicit wait for now, can be replaced with explicit/fluent wait
+    # time.sleep(5)
 
-    otp = get_latest_otp()
-    if not otp:
-        print("No OTP found. Exiting...")
-        return
-    print(f"OTP: {otp}")
+    # otp = get_latest_otp()
+    # if not otp:
+    #     print("No OTP found. Exiting...")
+    #     return
+    # print(f"OTP: {otp}")
     
-    # Make a post request to the /verify-otp endpoint
-    # with the email and OTP
-    # Use the requests library to make the request
-    data = {
-        "email": USER_EMAIL,
-        "otp": otp
-    }
+    # # Make a post request to the /verify-otp endpoint
+    # # with the email and OTP
+    # # Use the requests library to make the request
+    # data = {
+    #     "email": USER_EMAIL,
+    #     "otp": otp
+    # }
 
-    response = requests.post(f"{BASE_URL}/verify-otp", data=data)
+    # response = requests.post(f"{BASE_URL}/verify-otp", data=data)
 
-    if response.status_code == 200:
-        print("OTP verified successfully.")
-        print(response.json())
-    else:
-        print("Failed to verify OTP.")
-        print(response.json())
+    # if response.status_code == 200:
+    #     print("OTP verified successfully.")
+    #     print(response.json())
+    # else:
+    #     print("Failed to verify OTP.")
+    #     print(response.json())
 
 
 if __name__ == "__main__":
