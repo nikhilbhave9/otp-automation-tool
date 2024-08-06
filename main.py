@@ -49,9 +49,7 @@ def otp_page(email: str, request: Request):
 async def verify_otp(request: Request, response: Response, email: str = Form(...), otp: str = Form(...)):
     stored_otp = auth_service.get_otp_from_file(email)
     if stored_otp == otp:
-        token = auth_service.generate_dummy_token()
         auth_service.delete_otp(email)
-        response.set_cookie(key="login_token", value=token, httponly=True, secure=True)
         return RedirectResponse(url="/success", status_code=status.HTTP_303_SEE_OTHER)
     else:
         return JSONResponse(content={"detail": "Invalid OTP"}, status_code=status.HTTP_401_UNAUTHORIZED)

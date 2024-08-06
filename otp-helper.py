@@ -12,7 +12,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-
+from pyvirtualdisplay import Display
 
 load_dotenv()
 
@@ -30,85 +30,109 @@ BASE_URL = "http://localhost:8000" # To be made dynamic with the required dashbo
 
 def get_latest_otp():
     try:
+        # Mailserver connection
         mail = imaplib.IMAP4_SSL("imap.gmail.com")
         mail.login(DEV_USER, DEV_PASSWORD)
         mail.select("inbox")
-        status, messages = mail.search(None, '(SUBJECT "Your OTP Code")')
-        messages = messages[0].split()
-        if not messages:
+
+        status, data = mail.search(None, '(SUBJECT "Your OTP Code")') # Can be made dynamic based on a config file
+        if status != 'OK':
+            print("Error searching for emails.")
+            return None
+        
+        email_ids = data[0].split()
+        if not email_ids:
             print("No OTP email found.")
             return None
-        latest_email_id = messages[-1]
+        
+        latest_email_id = email_ids[-1]
         status, msg_data = mail.fetch(latest_email_id, "(RFC822)")
+        if status != 'OK':
+            print("Error fetching email.")
+            return None
+        
+        # Process the email content
         for response_part in msg_data:
             if isinstance(response_part, tuple):
                 msg = email.message_from_bytes(response_part[1])
+                
+                # Extract the email body
+                body = None
                 if msg.is_multipart():
                     for part in msg.walk():
-                        content_type = part.get_content_type()
-                        if content_type == "text/plain":
+                        if part.get_content_type() == "text/plain":
                             body = part.get_payload(decode=True).decode()
-                            otp = re.findall(r'\b\d{6}\b', body)
-                            if otp:
-                                mail.store(latest_email_id, '+FLAGS', '\\Seen')
-                                return otp[0]
+                            break
                 else:
                     body = msg.get_payload(decode=True).decode()
+                
+                if body:
                     otp = re.findall(r'\b\d{6}\b', body)
                     if otp:
+                        # Mark the email as read
                         mail.store(latest_email_id, '+FLAGS', '\\Seen')
                         return otp[0]
+                    else:
+                        print("OTP not found in the email body.")
+                else:
+                    print("Failed to extract the email body.")
+        
         print("OTP not found in the email.")
         return None
+        
     except imaplib.IMAP4.error as e:
         print(f"IMAP error: {e}")
     except Exception as e:
         print(f"Unexpected error: {e}")
+    finally:
+        mail.logout()
 
 
 def perform_login():
-    
 
     # USE SELENIUM METHOD
+
+    # # Start virtual display
+    # display = Display(visible=0, size=(1920, 1080))
+    # display.start()
+
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    # chrome_options.add_argument("--remote-debugging-port=9222")
 
     chrome_binary_path = "/home/nikhilbhave9/chrome-linux64/chrome"
     chromedriver_path = "/home/nikhilbhave9/chromedriver-linux64/chromedriver"
 
     chrome_options.binary_location = chrome_binary_path
     service = Service(chromedriver_path)
-    import ipdb; ipdb.set_trace()
     with webdriver.Chrome(service=service, options=chrome_options) as driver:
         import ipdb; ipdb.set_trace()
         driver.get(f"{BASE_URL}/")
-        # driver.find_element(By.NAME, "email").send_keys(USER_EMAIL)
-        # driver.find_element(By.NAME, "password").send_keys(USER_PASSWORD)
-        # driver.find_element(By.ID, "sign-in-button").click()
+        driver.find_element(By.ID, "email").send_keys(USER_EMAIL)
+        driver.find_element(By.ID, "password").send_keys(USER_PASSWORD)
+        driver.find_element(By.XPATH, '//form[@method="post" and @action="/sign-in"]//button[@type="submit" and @class="btn"]').click()
+        time.sleep(5)
 
-        # time.sleep(5)
+        otp = get_latest_otp()
+        if not otp:
+            print("Error, No valid OTP  or OTP email found. Exiting")
+            return
+        print(f"OTP: {otp}") # For debugging, delete later
 
-        # otp = get_latest_otp()
-        # if not otp:
-        #     print("No OTP found. Exiting...")
-        #     return
-        # print(f"OTP: {otp}")
+        driver.find_element(By.ID, "otp").send_keys(otp)
+        driver.find_element(By.XPATH, '//form[@method="post" and @action="/verify-otp"]//button[@type="submit" and @class="btn"]').click()
 
-        # driver.find_element(By.NAME, "otp").send_keys(otp)
-        # driver.find_element(By.ID, "verify-otp-button").click()
+        time.sleep(5)
 
-        # time.sleep(5)
-
-        # print(driver.current_url)
-        # if "dashboard" in driver.current_url:
-        #     print("Sign-in successful.")
-        # else:
-        #     print("Failed to sign in.")
-        #     print("Please verify the OTP manually.")
-        #     print("Exiting...")
-        #     return
+        print(driver.current_url)
+        if "success" in driver.current_url:
+            print("Sign-in successful.")
+        else:
+            print("Failed to sign in. Exiting")
+            return
 
     # USE API METHOD 
     # (we can alternatively use selenium to simulate the login process)
