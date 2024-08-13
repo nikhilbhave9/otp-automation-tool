@@ -7,3 +7,6 @@ chromedriver-linux64
 geckodriver
 otps.csv
 start_vnc.sh
+docker-compose.yml
+Dockerfile*
+entrypoint.sh

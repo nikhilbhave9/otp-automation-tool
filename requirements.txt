@@ -4,3 +4,8 @@ jinja2
 email-validator
 python-dotenv
 requests
+selenium
+pyvirtualdisplay
+imaplib2
+ipdb
+python-multipart
